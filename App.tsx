@@ -989,7 +989,6 @@ export default function App() {
                   ) : (
                     <div className="space-y-3">
                       {prodsPais.map(p => {
-                        const profitEscala = p.beneficioEspCOD - p.cpa11;
                         return (
                           <div key={p.id} className="bg-gray-900/50 p-4 rounded-lg flex justify-between items-center gap-4">
                             <div className="flex-1">
@@ -997,8 +996,8 @@ export default function App() {
                               <p className="text-xs text-gray-400 mt-1">
                                 PVP: {pais.simbolo}{fmt(p.pvp)} • Coste Total: {pais.simbolo}{fmt(p.costeConIva + p.envio)}
                               </p>
-                              <p className={`mt-1 text-sm font-bold ${profitEscala >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                Profit Escala: {pais.simbolo}{fmt(profitEscala)}
+                              <p className={`mt-1 text-sm font-bold ${p.profitEscala >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                Profit Escala: {pais.simbolo}{fmt(p.profitEscala)}
                               </p>
                             </div>
                             <div className="flex gap-2">
