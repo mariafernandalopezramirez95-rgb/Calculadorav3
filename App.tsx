@@ -2,10 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Calculator, Upload, DollarSign, ChevronDown, Plus, Edit, Trash2,
   AlertCircle, Package, TrendingUp, TrendingDown, Eye, Building2,
-  Truck, CreditCard, ShoppingCart, Wallet
+  Truck, CreditCard, ShoppingCart, Wallet, X
 } from './components/icons';
 import { PAISES, AGENCIAS } from './constants';
-import type { FormState, Producto, HistoricoItem, InversionData, CpaMedio, GastosOperativos, ProductoCalculado, ProfitData, ImportacionDatos } from './types';
+import type { FormState, Producto, HistoricoItem, InversionData, CpaMedio, GastosOperativos, ProductoCalculado, ProfitData, ImportacionDatos, Gasto } from './types';
 import { fmt, fmtDec, convertir, getSimboloForMoneda } from './utils/formatters';
 
 // This is a dynamic import, so we need to declare the type for the module.
@@ -86,10 +86,11 @@ const SummaryDashboard: React.FC<SummaryDashboardProps> = ({ historico, inversio
   const inversionPublicidadTotal = inversionEnCampana + comisionAgenciaPublicidad;
   const inversionPublicidadTotalUSD = convertir(inversionPublicidadTotal, inversionData.moneda, 'USD');
 
-  const shopifyUSD = parseFloat(gastosOperativos.shopify) || 0;
-  const otrosLocal = parseFloat(gastosOperativos.otros) || 0;
-  const otrosUSD = convertir(otrosLocal, PAISES[paisSel].moneda, 'USD');
-  const gastosOperativosTotalUSD = shopifyUSD + otrosUSD;
+  let gastosOperativosTotalUSD = 0;
+  gastosOperativos.gastos.forEach(gasto => {
+    const monto = parseFloat(gasto.monto) || 0;
+    gastosOperativosTotalUSD += convertir(monto, gasto.moneda, 'USD');
+  });
 
   const totalGastosAdsOperativosUSD = inversionPublicidadTotalUSD + gastosOperativosTotalUSD;
   const totalProfitFinalUSD = totalProfitOperativoUSD - totalGastosAdsOperativosUSD;
@@ -137,22 +138,12 @@ const SummaryDashboard: React.FC<SummaryDashboardProps> = ({ historico, inversio
   );
 };
 
-// Fix: Correctly type setInversionData to accept a functional update.
-const DetailedResultsDashboard = ({ profitData, inversionData, setInversionData, investmentCurrencies }: { profitData: ProfitData, inversionData: InversionData, setInversionData: React.Dispatch<React.SetStateAction<InversionData>>, investmentCurrencies: string[] }) => {
+const DetailedResultsDashboard = ({ profitData, onInversionChange, investmentCurrencies }: { profitData: ProfitData, onInversionChange: (newData: InversionData) => void, investmentCurrencies: string[] }) => {
     const pais = PAISES[profitData.pais];
     const simbolo = pais.simbolo;
 
-    useEffect(() => {
-        if (pais.nombre === 'España') {
-            setInversionData(prev => ({ ...prev, moneda: 'EUR' }));
-        } else {
-            setInversionData(prev => ({ ...prev, moneda: 'USD' }));
-        }
-    }, [profitData.pais, setInversionData]);
-
     const profitExcel = profitData.beneficioGastos - profitData.inversionPublicidadTotal;
 
-    // Fix: Change StatBox to be a React.FC to correctly handle the 'key' prop.
     const StatBox: React.FC<{ label: string, value: number, total: number }> = ({ label, value, total }) => (
       <div className="bg-yellow-300 text-black p-2 rounded-lg shadow-md">
         <h4 className="font-bold text-center text-xs uppercase">{label}</h4>
@@ -216,14 +207,14 @@ const DetailedResultsDashboard = ({ profitData, inversionData, setInversionData,
                          <div className="flex gap-2 items-stretch">
                             <input 
                                 type="number"
-                                value={inversionData.monto}
-                                onChange={(e) => setInversionData({ ...inversionData, monto: e.target.value })}
+                                value={profitData.inversionData.monto}
+                                onChange={(e) => onInversionChange({ ...profitData.inversionData, monto: e.target.value })}
                                 className="w-2/3 p-3 text-2xl font-bold rounded-lg border-2 border-gray-600 outline-none text-center bg-black text-white focus:ring-2 focus:ring-yellow-500"
                                 placeholder="0.00"
                             />
                             <select
-                                value={inversionData.moneda}
-                                onChange={(e) => setInversionData({ ...inversionData, moneda: e.target.value })}
+                                value={profitData.inversionData.moneda}
+                                onChange={(e) => onInversionChange({ ...profitData.inversionData, moneda: e.target.value })}
                                 className="w-1/3 p-2 text-sm font-bold rounded-lg border-2 border-gray-600 outline-none bg-black text-white focus:ring-2 focus:ring-yellow-500"
                             >
                                 {investmentCurrencies.map(c => <option key={c} value={c}>{c}</option>)}
@@ -317,7 +308,7 @@ const DetailedResultsDashboard = ({ profitData, inversionData, setInversionData,
                                     <h3 className="font-bold text-center text-white mb-2">INVERSIÓN PUBLICITARIA</h3>
                                     <div className="w-full bg-gray-700 rounded-full h-8 border-2 border-gray-600 shadow-inner flex justify-end">
                                         <div className="bg-gradient-to-r from-gray-900 to-black border-l-2 border-gray-500 h-full rounded-r-full flex items-center justify-end px-2" style={{ width: `100%` }}>
-                                            <span className="font-bold text-white text-sm">{getSimboloForMoneda(inversionData.moneda)}{fmt(inversionData.monto)}</span>
+                                            <span className="font-bold text-white text-sm">{getSimboloForMoneda(profitData.inversionData.moneda)}{fmt(profitData.inversionData.monto)}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -349,14 +340,14 @@ export default function App() {
   const [cpaMedio, setCpaMedio] = useState<CpaMedio>({ valor: '', moneda: 'USD' });
 
   const [gastosOperativos, setGastosOperativos] = useState<GastosOperativos>({
-    shopify: '', otros: '', costeDevolucionUnitario: ''
+    gastos: [], costeDevolucionUnitario: ''
   });
 
   const [form, setForm] = useState<FormState>({ nombre: '', pvp: '', coste: '', envio: '', cpaObj: '' });
   const [editId, setEditId] = useState<number | null>(null);
   const [tasas, setTasas] = useState({ conf: 90, entr: 60 });
   const [cargando, setCargando] = useState(false);
-  const [mostrarGastos, setMostrarGastos] = useState(false);
+  const [mostrarGastos, setMostrarGastos] = useState(true);
   const [feedbackMsg, setFeedbackMsg] = useState<{type: 'success' | 'error', text: string} | null>(null);
 
 
@@ -366,24 +357,45 @@ export default function App() {
       if (saved) {
         const data = JSON.parse(saved);
         setProductos(data.productos || []);
-        setHistorico(data.historico || []);
+
+        const loadedInversionData = data.inversionData || { monto: '', moneda: 'USD' };
+        setInversionData(loadedInversionData);
         if (data.inversionData) {
-            setInversionData({ monto: data.inversionData.monto || '', moneda: data.inversionData.moneda || 'USD' });
             if (data.inversionData.hasOwnProperty('usarAgencia')) {
                 setUsarAgencia(data.inversionData.usarAgencia);
             } else if (data.inversionData.hasOwnProperty('agencia')) {
                 setUsarAgencia(data.inversionData.agencia !== 'ninguna');
             }
-        } else {
-             setInversionData({ monto: '', moneda: 'USD' });
         }
+        
+        let migratedGastos: GastosOperativos = { gastos: [], costeDevolucionUnitario: '' };
         const loadedGastos = data.gastosOperativos || {};
-        setGastosOperativos({
-            shopify: loadedGastos.shopify || '',
-            otros: loadedGastos.otros || '',
-            costeDevolucionUnitario: loadedGastos.costeDevolucionUnitario || ''
-        });
+        if (loadedGastos.shopify !== undefined && !loadedGastos.gastos) { // Old format detected
+            migratedGastos.gastos.push({
+                id: Date.now(),
+                nombre: 'Shopify',
+                monto: loadedGastos.shopify || '29',
+                moneda: 'USD'
+            });
+            migratedGastos.costeDevolucionUnitario = loadedGastos.costeDevolucionUnitario || '';
+        } else {
+            migratedGastos = loadedGastos.gastos ? loadedGastos : { gastos: [{id: Date.now(), nombre: 'Shopify', monto: '29', moneda: 'USD'}], costeDevolucionUnitario: '' };
+        }
+        setGastosOperativos(migratedGastos);
+        
+        const migratedHistorico = (data.historico || []).map((h: any) => ({
+            ...h,
+            inversionData: h.inversionData || loadedInversionData,
+            gastosOperativos: h.gastosOperativos || migratedGastos,
+        }));
+        setHistorico(migratedHistorico);
+
         setCpaMedio(data.cpaMedio || { valor: '', moneda: 'USD' });
+      } else {
+         setGastosOperativos({
+            gastos: [{ id: Date.now(), nombre: 'Shopify', monto: '29', moneda: 'USD' }],
+            costeDevolucionUnitario: ''
+        });
       }
     } catch (e) {
       console.error("Failed to load data from localStorage", e);
@@ -412,7 +424,7 @@ export default function App() {
     const pvp = parseFloat(form.pvp) || 0;
     const coste = parseFloat(form.coste) || 0;
     const envio = parseFloat(form.envio) || 0;
-    const cpaObj = parseFloat(form.cpaObj) || 0;
+    const cpaObjInput = parseFloat(form.cpaObj) || 0;
 
     if (pvp === 0) return null;
 
@@ -422,8 +434,16 @@ export default function App() {
     const beneficioBruto = pvp - costeConIva - envio;
     const margenBruto = (beneficioBruto / pvp) * 100;
 
-    const cpa8 = pvp * 0.08;
-    const cpa11 = pvp * 0.11;
+    const agenciaKey = usarAgencia && pais.agenciaKey ? pais.agenciaKey : 'ninguna';
+    const agencia = AGENCIAS[agenciaKey] || AGENCIAS['ninguna'];
+    const comisionFactor = 1 + (agencia.comision / 100);
+
+    const cpa8_base = pvp * 0.08;
+    const cpa11_base = pvp * 0.11;
+
+    const cpa8 = cpa8_base * comisionFactor;
+    const cpa11 = cpa11_base * comisionFactor;
+    const cpaObj = cpaObjInput > 0 ? cpaObjInput * comisionFactor : 0;
 
     const tasaConf = tasas.conf / 100;
     const tasaEntr = tasas.entr / 100;
@@ -434,16 +454,16 @@ export default function App() {
     const costoEnvioEsperado = envio * tasaConf;
     const beneficioEspCOD = ingresoEsperado - costoProductoEsperado - costoEnvioEsperado;
 
-    const profitTesteo = beneficioEspCOD - cpa8;
-    const profitEscala = beneficioEspCOD - cpa11;
-    const profitObjetivo = cpaObj > 0 ? beneficioEspCOD - cpaObj : null;
+    const profitTesteo = beneficioEspCOD - cpa11; // Testeo is 11%
+    const profitEscala = beneficioEspCOD - cpa8; // Escala is 8%
+    const profitObjetivo = cpaObjInput > 0 ? beneficioEspCOD - cpaObj : null;
 
     return {
-      coste, costeConIva, envio, beneficioBruto, margenBruto, cpa8, cpa11, cpaObj,
+      coste, costeConIva, envio, beneficioBruto, margenBruto, cpa8, cpa11, cpaObj: cpaObjInput,
       tasaFinal, ingresoEsperado, costoProductoEsperado, costoEnvioEsperado,
       beneficioEspCOD, profitTesteo, profitEscala, profitObjetivo
     };
-  }, [form, paisSel, incluirIva, tasas]);
+  }, [form, paisSel, incluirIva, tasas, usarAgencia]);
   
   const handleSubmit = () => {
     if (!form.nombre || !form.pvp) {
@@ -502,7 +522,29 @@ export default function App() {
         const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
         if (jsonData.length === 0) {
-            throw new Error('El archivo Excel está vacío o no tiene el formato correcto.');
+            throw new Error('El archivo Excel está vacío o no tiene filas de datos.');
+        }
+
+        const COLS = {
+            STATUS: ['ESTATUS', 'K'],
+            VALOR_COMPRA: ['VALOR DE COMPRA EN PRODUCTOS', 'T'],
+            FLETE: ['PRECIO FLETE', 'V'],
+            COSTO_DEVOLUCION_FLETE: ['COSTO DEVOLUCION FLETE', 'W'],
+            COSTO_PROVEEDOR: ['TOTAL EN PRECIOS DE PROVEEDOR', 'Y'],
+        };
+        
+        const requiredHeaders = [
+            COLS.STATUS[0],
+            COLS.VALOR_COMPRA[0],
+            COLS.FLETE[0],
+            COLS.COSTO_PROVEEDOR[0],
+        ];
+
+        const fileHeaders = Object.keys(jsonData[0] as object);
+        const missingHeaders = requiredHeaders.filter(header => !fileHeaders.includes(header));
+
+        if (missingHeaders.length > 0) {
+            throw new Error(`Cabeceras incorrectas. Faltan las columnas: ${missingHeaders.join(', ')}.`);
         }
 
         const getNum = (row: any, keys: (string | number)[]): number => {
@@ -513,14 +555,6 @@ export default function App() {
         const getStr = (row: any, keys: (string | number)[]): string => {
             for (const key of keys) { if (row[key] !== undefined) { return String(row[key]).toUpperCase().trim(); } }
             return '';
-        };
-
-        const COLS = {
-            STATUS: ['ESTATUS', 'K'],
-            VALOR_COMPRA: ['VALOR DE COMPRA EN PRODUCTOS', 'T'],
-            FLETE: ['PRECIO FLETE', 'V'],
-            COSTO_DEVOLUCION_FLETE: ['COSTO DEVOLUCION FLETE', 'W'],
-            COSTO_PROVEEDOR: ['TOTAL EN PRECIOS DE PROVEEDOR', 'Y'],
         };
         
         let totalPedidos = jsonData.length;
@@ -596,13 +630,15 @@ export default function App() {
                 facturacionIncidencia,
                 rehusadosTransito, 
                 rehusadosRecepcionados, 
-                cancelados: 0, // Deprecated, using noConfirmables
+                cancelados: 0, 
                 rechazados, 
                 reclameOficina, 
                 noConfirmables,
                 enRuta,
                 envioIncidencia: 0, enBodega: 0, enReparto: 0, reenvio: 0,
-            }
+            },
+            inversionData: JSON.parse(JSON.stringify(inversionData)),
+            gastosOperativos: JSON.parse(JSON.stringify(gastosOperativos)),
         };
 
         const nuevosHistoricos = [nuevaImportacion, ...historico];
@@ -613,12 +649,12 @@ export default function App() {
 
     } catch (error) {
         console.error("Error processing Excel file:", error);
-        const errorMessage = error instanceof Error ? error.message : "Ocurrió un error desconocido.";
+        const errorMessage = error instanceof Error ? error.message : "Ocurrió un error desconocido al procesar el archivo.";
         setFeedbackMsg({type: 'error', text: `Error al importar: ${errorMessage}`});
     } finally {
         setCargando(false);
         if (e.target) e.target.value = '';
-        setTimeout(() => setFeedbackMsg(null), 5000);
+        setTimeout(() => setFeedbackMsg(null), 8000);
     }
   };
 
@@ -632,11 +668,11 @@ export default function App() {
     const importacion = historico.find(h => h.id === importacionId);
     if (!importacion) return null;
 
-    const datos = importacion.datos;
+    const { datos, inversionData: historicInversion, gastosOperativos: historicGastos } = importacion;
     const paisData = PAISES[importacion.pais];
     const monedaPais = paisData.moneda;
-
-    const { monto, moneda: monedaInversion } = inversionData;
+    
+    const { monto, moneda: monedaInversion } = historicInversion;
     const agenciaKey = usarAgencia && paisData ? paisData.agenciaKey : 'ninguna';
     const agencia = (agenciaKey && AGENCIAS[agenciaKey]) ? AGENCIAS[agenciaKey] : AGENCIAS['ninguna'];
 
@@ -644,17 +680,19 @@ export default function App() {
     const comisionAgenciaPublicidad = inversionEnCampana * (agencia.comision / 100);
     const inversionPublicidadTotal = inversionEnCampana + comisionAgenciaPublicidad;
     const inversionPublicidadTotalEnMonedaLocal = convertir(inversionPublicidadTotal, monedaInversion, monedaPais);
-
-    const shopify = parseFloat(gastosOperativos.shopify) || 0;
-    const otrosGastos = parseFloat(gastosOperativos.otros) || 0;
-    const gastosOperativosTotal = convertir(shopify, 'USD', monedaPais) + otrosGastos;
+    
+    let gastosOperativosTotal = 0;
+    historicGastos.gastos.forEach(gasto => {
+        const montoGasto = parseFloat(gasto.monto) || 0;
+        gastosOperativosTotal += convertir(montoGasto, gasto.moneda, monedaPais);
+    });
 
     const facturacion = datos.facturacion || 0;
     const costoProductos = datos.costoProductos || 0;
     const costoEnvioTotal = datos.costoEnvioTotal || 0;
     
     let costoDevolucionFleteTotal = datos.costoDevolucionFleteTotal;
-    const devolucionUnitaria = parseFloat(gastosOperativos.costeDevolucionUnitario || '0');
+    const devolucionUnitaria = parseFloat(historicGastos.costeDevolucionUnitario || '0');
     if (importacion.pais === 'espana' && devolucionUnitaria > 0) {
       costoDevolucionFleteTotal = datos.rehusadosRecepcionados * devolucionUnitaria;
     }
@@ -686,8 +724,37 @@ export default function App() {
       beneficioGastos,
       beneficioPosibleDev,
       costoDevolucionFleteTotal,
+      inversionData: historicInversion,
     };
-}, [historico, inversionData, gastosOperativos, usarAgencia]);
+}, [historico, usarAgencia]);
+
+  const handleInversionChangeForReport = useCallback((newInversionData: InversionData) => {
+    if (!importacionActiva) return;
+    setHistorico(prev => prev.map(h => 
+        h.id === importacionActiva ? { ...h, inversionData: newInversionData } : h
+    ));
+  }, [importacionActiva]);
+  
+  const addGasto = () => {
+    setGastosOperativos(prev => ({
+      ...prev,
+      gastos: [...prev.gastos, { id: Date.now(), nombre: '', monto: '', moneda: pais.moneda }]
+    }));
+  };
+
+  const removeGasto = (id: number) => {
+    setGastosOperativos(prev => ({
+      ...prev,
+      gastos: prev.gastos.filter(g => g.id !== id)
+    }));
+  };
+  
+  const handleGastoChange = (id: number, field: keyof Gasto, value: string) => {
+    setGastosOperativos(prev => ({
+      ...prev,
+      gastos: prev.gastos.map(g => g.id === id ? { ...g, [field]: value } : g)
+    }));
+  };
 
   const pais = PAISES[paisSel];
   const prodsPais = productos.filter(p => p.pais === paisSel);
@@ -750,8 +817,11 @@ export default function App() {
         </div>
 
         {feedbackMsg && (
-          <div className={`p-4 mb-4 rounded-lg font-bold text-center ${feedbackMsg.type === 'success' ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}`}>
-            {feedbackMsg.text}
+          <div className={`p-4 mb-4 rounded-lg font-bold flex justify-between items-center ${feedbackMsg.type === 'success' ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}`}>
+            <span className="text-sm">{feedbackMsg.text}</span>
+            <button onClick={() => setFeedbackMsg(null)} className="ml-4 p-1 rounded-full hover:bg-white/10 transition">
+              <X size={18} />
+            </button>
           </div>
         )}
         
@@ -848,12 +918,21 @@ export default function App() {
 
                             {cpaMedio.valor && parseFloat(cpaMedio.valor) > 0 ? (
                               (() => {
-                                const cpaEnMonedaLocal = convertir(parseFloat(cpaMedio.valor), cpaMedio.moneda, pais.moneda);
+                                const paisData = PAISES[paisSel];
+                                const agenciaKey = usarAgencia && paisData.agenciaKey ? paisData.agenciaKey : 'ninguna';
+                                const agencia = AGENCIAS[agenciaKey] || AGENCIAS['ninguna'];
+                                const comisionFactor = 1 + (agencia.comision / 100);
+
+                                const cpaBaseEnMonedaLocal = convertir(parseFloat(cpaMedio.valor), cpaMedio.moneda, pais.moneda);
+                                const cpaEnMonedaLocal = cpaBaseEnMonedaLocal * comisionFactor;
                                 const profitConCPA = metricas.beneficioEspCOD - cpaEnMonedaLocal;
                                 return (
                                   <div className="space-y-4">
                                     <div className="p-3 bg-purple-500/10 rounded-lg border border-purple-500/30 flex justify-between items-center">
-                                      <div className="text-xs font-bold text-purple-200">Tu CPA Real ({cpaMedio.valor} {cpaMedio.moneda})</div>
+                                      <div className="text-xs font-bold text-purple-200">
+                                          Tu CPA Real ({cpaMedio.valor} {cpaMedio.moneda})
+                                          {usarAgencia && agencia.comision > 0 && <span className="block text-purple-400 text-[10px]">+ {agencia.comision}% Comisión Agencia</span>}
+                                      </div>
                                       <div className="text-xl font-bold text-purple-300">-{pais.simbolo}{fmt(cpaEnMonedaLocal)}</div>
                                     </div>
                                     <div className={`p-4 rounded-xl text-center border-2 ${profitConCPA >= 0 ? 'bg-green-500/20 border-green-500/60' : 'bg-red-500/20 border-red-500/60'}`}>
@@ -874,12 +953,12 @@ export default function App() {
                              {/* Scenarios */}
                             <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-700">
                               <div className="bg-blue-500/20 p-4 rounded-lg text-center">
-                                <p className="text-xs text-gray-400">🧪 Testeo (CPA 8%)</p>
+                                <p className="text-xs text-gray-400">🧪 Testeo (CPA 11%)</p>
                                 <p className={`my-1 text-2xl font-bold ${metricas.profitTesteo >= 0 ? 'text-green-400' : 'text-red-400'}`}>{pais.simbolo}{fmt(metricas.profitTesteo)}</p>
                                 <p className="text-xs text-gray-400">${fmtDec(convertir(metricas.profitTesteo, pais.moneda, 'USD'))} USD</p>
                               </div>
                               <div className="bg-green-500/20 p-4 rounded-lg text-center border-2 border-green-500/50">
-                                <p className="text-xs text-gray-400">📈 Escala (CPA 11%)</p>
+                                <p className="text-xs text-gray-400">📈 Escala (CPA 8%)</p>
                                 <p className={`my-1 text-2xl font-bold ${metricas.profitEscala >= 0 ? 'text-green-400' : 'text-red-400'}`}>{pais.simbolo}{fmt(metricas.profitEscala)}</p>
                                 <p className="text-xs text-gray-400">${fmtDec(convertir(metricas.profitEscala, pais.moneda, 'USD'))} USD</p>
                               </div>
@@ -971,19 +1050,37 @@ export default function App() {
                   {/* Expenses */}
                   <div className="bg-gray-800 p-6 rounded-2xl border border-purple-500/30">
                     <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-xl font-bold text-purple-400 flex items-center gap-2"><Wallet size={22}/>Gastos Operativos</h2>
+                        <h2 className="text-xl font-bold text-purple-400 flex items-center gap-2"><Wallet size={22}/>Gastos Operativos Mensuales</h2>
                         <button onClick={() => setMostrarGastos(!mostrarGastos)} className="px-3 py-1 text-xs font-bold bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 rounded-full">{mostrarGastos ? 'Ocultar' : 'Mostrar'}</button>
                     </div>
                     {mostrarGastos && (
                         <div className="space-y-4">
-                          <div>
-                            <label className="flex items-center gap-2 text-sm font-bold mb-2 text-gray-300"><ShoppingCart size={16}/>Shopify (USD):</label>
-                            <input type="number" value={gastosOperativos.shopify} onChange={(e) => setGastosOperativos({ ...gastosOperativos, shopify: e.target.value })} className="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg" placeholder="29.00" />
-                          </div>
-                          <div>
-                            <label className="text-sm font-bold mb-2 text-gray-300">Otros Gastos ({pais.moneda}):</label>
-                            <input type="number" value={gastosOperativos.otros} onChange={(e) => setGastosOperativos({ ...gastosOperativos, otros: e.target.value })} className="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg" placeholder="0.00" />
-                          </div>
+                            {gastosOperativos.gastos.map((gasto, index) => (
+                                <div key={gasto.id} className="grid grid-cols-12 gap-2 items-center">
+                                    <div className="col-span-5">
+                                        {index === 0 && <label className="text-xs font-bold text-gray-400">Concepto</label>}
+                                        <input type="text" value={gasto.nombre} onChange={e => handleGastoChange(gasto.id, 'nombre', e.target.value)} className="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-sm" placeholder="Ej: Herramienta SEO" />
+                                    </div>
+                                    <div className="col-span-3">
+                                        {index === 0 && <label className="text-xs font-bold text-gray-400">Monto</label>}
+                                        <input type="number" value={gasto.monto} onChange={e => handleGastoChange(gasto.id, 'monto', e.target.value)} className="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-sm" placeholder="0.00" />
+                                    </div>
+                                    <div className="col-span-3">
+                                        {index === 0 && <label className="text-xs font-bold text-gray-400">Moneda</label>}
+                                        <select value={gasto.moneda} onChange={e => handleGastoChange(gasto.id, 'moneda', e.target.value)} className="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-sm">
+                                            {investmentCurrencies.map(c => <option key={c} value={c}>{c}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="col-span-1 text-right">
+                                        {index === 0 && <label className="text-xs font-bold text-gray-400">&nbsp;</label>}
+                                        <button onClick={() => removeGasto(gasto.id)} className="p-2 bg-red-600/50 hover:bg-red-500 text-white rounded-md transition"><Trash2 size={16} /></button>
+                                    </div>
+                                </div>
+                            ))}
+                            <button onClick={addGasto} className="w-full mt-2 py-2 px-4 bg-purple-500/20 hover:bg-purple-500/40 text-purple-300 font-bold rounded-lg transition flex items-center justify-center gap-2 text-sm"><Plus size={16} />Añadir Gasto</button>
+                            
+                            <hr className="border-gray-700" />
+
                            {paisSel === 'espana' && (
                             <div>
                                 <label className="text-sm font-bold mb-2 text-gray-300">Coste por Devolución (EUR):</label>
@@ -1054,8 +1151,7 @@ export default function App() {
                   </div>
                   <DetailedResultsDashboard 
                     profitData={profitData}
-                    inversionData={inversionData}
-                    setInversionData={setInversionData}
+                    onInversionChange={handleInversionChangeForReport}
                     investmentCurrencies={investmentCurrencies}
                   />
                  </div>

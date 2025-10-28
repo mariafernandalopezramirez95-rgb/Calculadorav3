@@ -58,7 +58,7 @@ export interface CpaMedio {
   moneda: string;
 }
 
-export interface TarjetaDropi {
+export interface Gasto {
   id: number;
   nombre: string;
   monto: string;
@@ -66,8 +66,7 @@ export interface TarjetaDropi {
 }
 
 export interface GastosOperativos {
-  shopify: string;
-  otros: string;
+  gastos: Gasto[];
   costeDevolucionUnitario?: string;
 }
 
@@ -100,6 +99,8 @@ export interface HistoricoItem {
   archivo: string;
   pais: string;
   datos: ImportacionDatos;
+  inversionData: InversionData;
+  gastosOperativos: GastosOperativos;
 }
 
 export interface ProfitData extends ImportacionDatos {
@@ -123,4 +124,5 @@ export interface ProfitData extends ImportacionDatos {
     roi?: number;
     beneficioGastos: number;
     beneficioPosibleDev: number;
+    inversionData: InversionData;
 }
