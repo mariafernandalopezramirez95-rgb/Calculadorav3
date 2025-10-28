@@ -4,13 +4,6 @@ export interface Pais {
   simbolo: string;
   flag: string;
   iva: number;
-  agenciaKey?: string;
-}
-
-export interface Agencia {
-  nombre: string;
-  comision: number;
-  moneda: string;
 }
 
 export interface ProductoCalculado {
@@ -19,16 +12,12 @@ export interface ProductoCalculado {
   envio: number;
   beneficioBruto: number;
   margenBruto: number;
-  cpa8: number;
-  cpa11: number;
   cpaObj: number;
   tasaFinal: number;
   ingresoEsperado: number;
   costoProductoEsperado: number;
   costoEnvioEsperado: number;
   beneficioEspCOD: number;
-  profitTesteo: number;
-  profitEscala: number;
   profitObjetivo: number | null;
 }
 
@@ -111,10 +100,7 @@ export interface ProfitData extends ImportacionDatos {
     inversionPublicidadTotal: number;
     gastosOperativosTotal: number;
     pais: string;
-    agencia?: string;
-    comisionPorcentaje?: number;
     inversionMoneda?: string;
-    comisionAgenciaPublicidad?: number;
     inversionEnCampana?: number;
     inversionEnMonedaLocal?: number;
     inversionCampanaEnMonedaLocal?: number;
