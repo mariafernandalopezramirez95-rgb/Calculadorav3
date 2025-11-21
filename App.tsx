@@ -116,7 +116,7 @@ const SummaryDashboard: React.FC<SummaryDashboardProps> = ({ historico, inversio
         <div className="p-4 bg-gray-900/50 rounded-lg text-center mb-6">
             <p className="text-sm text-yellow-300/80">
                 <AlertCircle className="inline-block mr-2 -mt-1" size={16} />
-                <strong>Nota:</strong> El Profit, Inversión y ROI se calculan usando los valores de "Inversión Publicitaria" y "Gastos Operativos" configurados actualmente en la pestaña <strong>Importar</strong>.
+                <strong>Nota:</strong> El Profit, Inversión y ROI se calculan usando los valores de "Inversión Publicitaria" configurados actualmente en la pestaña <strong>Importar</strong>.
             </p>
         </div>
 
@@ -339,7 +339,6 @@ export default function App() {
   const [editId, setEditId] = useState<number | null>(null);
   const [tasas, setTasas] = useState({ conf: 90, entr: 60 });
   const [cargando, setCargando] = useState(false);
-  const [mostrarGastos, setMostrarGastos] = useState(true);
   const [feedbackMsg, setFeedbackMsg] = useState<{type: 'success' | 'error', text: string} | null>(null);
 
 
@@ -702,32 +701,12 @@ export default function App() {
     ));
   }, [importacionActiva]);
   
-  const addGasto = () => {
-    setGastosOperativos(prev => ({
-      ...prev,
-      gastos: [...prev.gastos, { id: Date.now(), nombre: '', monto: '', moneda: pais.moneda }]
-    }));
-  };
-
-  const removeGasto = (id: number) => {
-    setGastosOperativos(prev => ({
-      ...prev,
-      gastos: prev.gastos.filter(g => g.id !== id)
-    }));
-  };
-  
-  const handleGastoChange = (id: number, field: keyof Gasto, value: string) => {
-    setGastosOperativos(prev => ({
-      ...prev,
-      gastos: prev.gastos.map(g => g.id === id ? { ...g, [field]: value } : g)
-    }));
-  };
-
   const pais = PAISES[paisSel];
   const prodsPais = productos.filter(p => p.pais === paisSel);
   const metricas = calcular();
   const profitData = importacionActiva ? calcProfit(importacionActiva) : null;
   const investmentCurrencies = [...new Set(['USD', 'EUR', pais.moneda])];
+  const cpaOptions = paisSel === 'colombia' ? ['USD', 'COP'] : ['USD', 'EUR'];
 
   return (
     <div className="min-h-screen bg-gray-900 text-white font-sans pb-10">
@@ -855,14 +834,15 @@ export default function App() {
                             <h3 className="text-sm font-bold text-purple-300">🎯 CPA Medio de Campaña</h3>
                              <div>
                                <label className="block text-xs font-bold mb-2 text-gray-300">Moneda:</label>
-                                <div className="flex gap-2">
-                                    {['USD', 'EUR'].map(m => (
-                                    <button key={m} onClick={() => setCpaMedio({ ...cpaMedio, moneda: m })} 
-                                        className={`flex-1 py-2 rounded-md font-bold text-sm transition ${cpaMedio.moneda === m ? 'bg-purple-500 text-white' : 'bg-gray-700 hover:bg-gray-600'}`}>
-                                        {m}
-                                    </button>
+                                <select
+                                    value={cpaMedio.moneda}
+                                    onChange={(e) => setCpaMedio({ ...cpaMedio, moneda: e.target.value })}
+                                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white font-bold focus:ring-2 focus:ring-purple-500 outline-none"
+                                >
+                                    {cpaOptions.map(m => (
+                                        <option key={m} value={m}>{m}</option>
                                     ))}
-                                </div>
+                                </select>
                             </div>
                             <div>
                                 <label className="block text-xs font-bold mb-2 text-gray-300">CPA que estás pagando:</label>
@@ -892,12 +872,6 @@ export default function App() {
                                 
                                 return (
                                   <div className="space-y-4">
-                                    <div className="p-3 bg-purple-500/10 rounded-lg border border-purple-500/30 flex justify-between items-center">
-                                      <div className="text-xs font-bold text-purple-200">
-                                          - Tu CPA Real ({cpaMedio.valor} {cpaMedio.moneda})
-                                      </div>
-                                      <div className="text-xl font-bold text-purple-300">{pais.simbolo}{fmt(cpaEnMonedaLocal)}</div>
-                                    </div>
                                     <div className={`p-4 rounded-xl text-center border-2 ${profitConCPA >= 0 ? 'bg-green-500/20 border-green-500/60' : 'bg-red-500/20 border-red-500/60'}`}>
                                       <p className="text-xs font-bold text-gray-400 uppercase">🎯 PROFIT FINAL POR PEDIDO</p>
                                       <p className={`my-1 text-5xl font-bold ${profitConCPA >= 0 ? 'text-green-400' : 'text-red-400'}`}>
@@ -994,50 +968,7 @@ export default function App() {
                             </div>
                         </div>
                     </div>
-                  {/* Expenses */}
-                  <div className="bg-gray-800 p-6 rounded-2xl border border-purple-500/30">
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-xl font-bold text-purple-400 flex items-center gap-2"><Wallet size={22}/>Gastos Operativos Mensuales</h2>
-                        <button onClick={() => setMostrarGastos(!mostrarGastos)} className="px-3 py-1 text-xs font-bold bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 rounded-full">{mostrarGastos ? 'Ocultar' : 'Mostrar'}</button>
-                    </div>
-                    {mostrarGastos && (
-                        <div className="space-y-4">
-                            {gastosOperativos.gastos.map((gasto, index) => (
-                                <div key={gasto.id} className="grid grid-cols-12 gap-2 items-center">
-                                    <div className="col-span-5">
-                                        {index === 0 && <label className="text-xs font-bold text-gray-400">Concepto</label>}
-                                        <input type="text" value={gasto.nombre} onChange={e => handleGastoChange(gasto.id, 'nombre', e.target.value)} className="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-sm" placeholder="Ej: Herramienta SEO" />
-                                    </div>
-                                    <div className="col-span-3">
-                                        {index === 0 && <label className="text-xs font-bold text-gray-400">Monto</label>}
-                                        <input type="number" value={gasto.monto} onChange={e => handleGastoChange(gasto.id, 'monto', e.target.value)} className="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-sm" placeholder="0.00" />
-                                    </div>
-                                    <div className="col-span-3">
-                                        {index === 0 && <label className="text-xs font-bold text-gray-400">Moneda</label>}
-                                        <select value={gasto.moneda} onChange={e => handleGastoChange(gasto.id, 'moneda', e.target.value)} className="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-sm">
-                                            {investmentCurrencies.map(c => <option key={c} value={c}>{c}</option>)}
-                                        </select>
-                                    </div>
-                                    <div className="col-span-1 text-right">
-                                        {index === 0 && <label className="text-xs font-bold text-gray-400">&nbsp;</label>}
-                                        <button onClick={() => removeGasto(gasto.id)} className="p-2 bg-red-600/50 hover:bg-red-500 text-white rounded-md transition"><Trash2 size={16} /></button>
-                                    </div>
-                                </div>
-                            ))}
-                            <button onClick={addGasto} className="w-full mt-2 py-2 px-4 bg-purple-500/20 hover:bg-purple-500/40 text-purple-300 font-bold rounded-lg transition flex items-center justify-center gap-2 text-sm"><Plus size={16} />Añadir Gasto</button>
-                            
-                            <hr className="border-gray-700" />
-
-                           {paisSel === 'espana' && (
-                            <div>
-                                <label className="text-sm font-bold mb-2 text-gray-300">Coste por Devolución (EUR):</label>
-                                <input type="number" value={gastosOperativos.costeDevolucionUnitario || ''} onChange={(e) => setGastosOperativos({ ...gastosOperativos, costeDevolucionUnitario: e.target.value })} className="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg" placeholder="5.00" />
-                                <p className="text-xs text-gray-400 mt-1">Coste por cada paquete rehusado que vuelve al almacén.</p>
-                            </div>
-                           )}
-                        </div>
-                    )}
-                  </div>
+                  
                 </div>
 
                 {/* File Upload Column */}
