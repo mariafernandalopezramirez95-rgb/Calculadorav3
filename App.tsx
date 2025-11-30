@@ -706,7 +706,9 @@ export default function App() {
   const metricas = calcular();
   const profitData = importacionActiva ? calcProfit(importacionActiva) : null;
   const investmentCurrencies = [...new Set(['USD', 'EUR', pais.moneda])];
-  const cpaOptions = paisSel === 'colombia' ? ['USD', 'COP'] : ['USD', 'EUR'];
+  
+  // DYNAMIC CPA OPTIONS: Always show USD and the selected country's local currency.
+  const cpaOptions = ['USD', pais.moneda];
 
   return (
     <div className="min-h-screen bg-gray-900 text-white font-sans pb-10">
