@@ -108,6 +108,7 @@ export interface ProfitData extends ImportacionDatos {
     cpaCampana?: number;
     cpaReal?: number;
     roi?: number;
+    roas?: number;
     beneficioGastos: number;
     beneficioPosibleDev: number;
     inversionData: InversionData;

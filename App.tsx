@@ -248,10 +248,11 @@ const DetailedResultsDashboard = ({ profitData, onInversionChange, investmentCur
                         ]} />
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div className="bg-rose-500 text-white p-2 rounded-lg text-center shadow-lg"><h5 className="text-xs font-bold">BENEFICIO - GASTOS</h5><p className="font-bold text-xl">{simbolo}{fmt(profitData.beneficioGastos)}</p></div>
                         <div className="bg-rose-500 text-white p-2 rounded-lg text-center shadow-lg"><h5 className="text-xs font-bold">BENEFICIO - POSIBLE DEV</h5><p className="font-bold text-xl">{simbolo}{fmt(profitData.beneficioPosibleDev)}</p></div>
                         <div className="bg-black text-lime-400 p-2 rounded-lg text-center shadow-lg border-2 border-lime-400"><h5 className="text-xs font-bold text-white">PROFIT</h5><p className="font-bold text-xl">{simbolo}{fmt(profitExcel)}</p></div>
+                        <div className="bg-purple-600 text-white p-2 rounded-lg text-center shadow-lg border-2 border-purple-400"><h5 className="text-xs font-bold">ROAS</h5><p className="font-bold text-xl">{profitData.roas ? fmtDec(profitData.roas) + 'x' : '—'}</p></div>
                     </div>
 
                     <div className="bg-gray-800 p-4 rounded-lg mt-4 border border-gray-700">
@@ -676,15 +677,16 @@ export default function App() {
     
     const gastosAdsOperativos = inversionPublicidadTotalEnMonedaLocal + gastosOperativosTotal;
     const roi = gastosAdsOperativos > 0 ? (profitFinal / gastosAdsOperativos) * 100 : 0;
-    const cpaReal = datos.total > 0 ? inversionPublicidadTotalEnMonedaLocal / datos.total : 0;
+    const roas = inversionPublicidadTotalEnMonedaLocal > 0 ? facturacion / inversionPublicidadTotalEnMonedaLocal : 0;
+    const cpaReal = datos.entregados > 0 ? inversionPublicidadTotalEnMonedaLocal / datos.entregados : 0;
 
     return {
       ...datos, facturacion, costos, profitOperativo,
-      profitFinal, 
-      inversionPublicidadTotal: inversionPublicidadTotalEnMonedaLocal, 
+      profitFinal,
+      inversionPublicidadTotal: inversionPublicidadTotalEnMonedaLocal,
       gastosOperativosTotal,
-      pais: importacion.pais, 
-      cpaReal, roi,
+      pais: importacion.pais,
+      cpaReal, roi, roas,
       inversionMoneda: monedaInversion,
       inversionEnCampana: inversionPublicidadTotal,
       beneficioGastos,
@@ -858,7 +860,7 @@ export default function App() {
                  {/* ... Results column ... */}
                  {metricas && (
                    <div className="bg-gray-800 p-6 rounded-2xl border border-yellow-500/30">
-                     <h3 className="text-lg font-bold mb-4 text-yellow-400">💰 PROFIT POR PEDIDO ENTREGADO</h3>
+                     <h3 className="text-lg font-bold mb-4 text-yellow-400">💰 PROFIT POR PEDIDO</h3>
                       <div className="space-y-4">
                             <div className="p-3 bg-blue-500/10 rounded-lg border-2 border-blue-500/40 flex justify-between items-center">
                               <span className="text-xs font-bold text-blue-200">Beneficio bruto esperado:</span>
