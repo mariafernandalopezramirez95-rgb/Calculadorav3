@@ -12,5 +12,5 @@ export const TASAS_USD: { [key: string]: number } = {
   COP: 4000, 
   EUR: 0.92,
   GTQ: 7.8,  // Tasa aproximada Quetzal
-  ARS: 1000  // Tasa aproximada Peso Argentino (Variable)
+  ARS: 1200  // Tasa aproximada Peso Argentino (editable en la UI)
 };

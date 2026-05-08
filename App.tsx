@@ -5,7 +5,7 @@ import {
   AlertCircle, Package, TrendingUp, TrendingDown, Eye, Building2,
   Truck, CreditCard, ShoppingCart, Wallet, X
 } from './components/icons';
-import { PAISES } from './constants';
+import { PAISES, TASAS_USD } from './constants';
 import type { FormState, Producto, HistoricoItem, InversionData, CpaMedio, GastosOperativos, ProductoCalculado, ProfitData, ImportacionDatos, Gasto } from './types';
 import { fmt, fmtDec, convertir, getSimboloForMoneda } from './utils/formatters';
 
@@ -341,7 +341,9 @@ export default function App() {
   const [tasas, setTasas] = useState({ conf: 90, entr: 60 });
   const [cargando, setCargando] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<{type: 'success' | 'error', text: string} | null>(null);
+  const [tasaARS, setTasaARS] = useState(1200);
 
+  useEffect(() => { TASAS_USD.ARS = tasaARS; }, [tasaARS]);
 
   useEffect(() => {
     try {
@@ -723,23 +725,37 @@ export default function App() {
             <p className="text-xs text-gray-400">Calculadora Dropshipping Profesional</p>
           </div>
           
-          <div className="relative">
-            <button onClick={() => setShowPaisMenu(!showPaisMenu)} className="flex items-center gap-2 px-4 py-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg cursor-pointer text-white text-sm font-bold hover:bg-yellow-500/20 transition-colors">
-              <span className="text-2xl">{pais.flag}</span>
-              <span>{pais.nombre}</span>
-              <ChevronDown size={16} />
-            </button>
-            
-            {showPaisMenu && (
-              <div className="absolute top-full right-0 mt-2 bg-gray-800 border border-yellow-500/30 rounded-xl min-w-[200px] shadow-2xl z-10 overflow-hidden">
-                {Object.entries(PAISES).map(([key, p]) => (
-                  <button key={key} onClick={() => { setPaisSel(key); setShowPaisMenu(false); }} className={`w-full p-3 text-left ${paisSel === key ? 'bg-yellow-500/20' : 'hover:bg-gray-700'} transition-colors flex items-center gap-3 text-white text-sm`}>
-                    <span className="text-2xl">{p.flag}</span>
-                    <span className="font-bold">{p.nombre}</span>
-                  </button>
-                ))}
+          <div className="flex items-center gap-3">
+            {paisSel === 'argentina' && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                <span className="text-xs text-blue-300 font-bold whitespace-nowrap">💱 ARS/USD</span>
+                <input
+                  type="number"
+                  value={tasaARS}
+                  onChange={(e) => setTasaARS(parseFloat(e.target.value) || 1)}
+                  className="w-20 bg-transparent text-white text-sm font-bold text-center outline-none border-b border-blue-400/50"
+                  min="1"
+                />
               </div>
             )}
+            <div className="relative">
+              <button onClick={() => setShowPaisMenu(!showPaisMenu)} className="flex items-center gap-2 px-4 py-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg cursor-pointer text-white text-sm font-bold hover:bg-yellow-500/20 transition-colors">
+                <span className="text-2xl">{pais.flag}</span>
+                <span>{pais.nombre}</span>
+                <ChevronDown size={16} />
+              </button>
+
+              {showPaisMenu && (
+                <div className="absolute top-full right-0 mt-2 bg-gray-800 border border-yellow-500/30 rounded-xl min-w-[200px] shadow-2xl z-10 overflow-hidden">
+                  {Object.entries(PAISES).map(([key, p]) => (
+                    <button key={key} onClick={() => { setPaisSel(key); setShowPaisMenu(false); }} className={`w-full p-3 text-left ${paisSel === key ? 'bg-yellow-500/20' : 'hover:bg-gray-700'} transition-colors flex items-center gap-3 text-white text-sm`}>
+                      <span className="text-2xl">{p.flag}</span>
+                      <span className="font-bold">{p.nombre}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -874,6 +890,7 @@ export default function App() {
                                 const profitConCPA = metricas.beneficioEspCOD - cpaEnMonedaLocal;
                                 const profitPercentage = pvp > 0 ? (profitConCPA / pvp) * 100 : 0;
                                 
+                                const roasProducto = cpaEnMonedaLocal > 0 ? metricas.ingresoEsperado / cpaEnMonedaLocal : 0;
                                 return (
                                   <div className="space-y-4">
                                     <div className={`p-4 rounded-xl text-center border-2 ${profitConCPA >= 0 ? 'bg-green-500/20 border-green-500/60' : 'bg-red-500/20 border-red-500/60'}`}>
@@ -890,6 +907,10 @@ export default function App() {
                                           </p>
                                       </div>
                                       {profitConCPA < 0 && <div className="mt-3 p-2 bg-red-500/20 rounded-md text-center text-xs text-red-300 font-bold">⚠️ PRODUCTO NO RENTABLE</div>}
+                                    </div>
+                                    <div className="p-3 bg-purple-500/10 rounded-xl border-2 border-purple-500/40 flex justify-between items-center">
+                                      <span className="text-xs font-bold text-purple-200">📊 ROAS:</span>
+                                      <span className="text-2xl font-bold text-purple-300">{fmtDec(roasProducto)}x</span>
                                     </div>
                                   </div>
                                 );
