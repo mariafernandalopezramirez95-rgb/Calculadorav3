@@ -8,6 +8,7 @@ import {
 import { PAISES, TASAS_USD } from './constants';
 import type { FormState, Producto, HistoricoItem, InversionData, CpaMedio, GastosOperativos, ProductoCalculado, ProfitData, ImportacionDatos, Gasto } from './types';
 import { fmt, fmtDec, convertir, getSimboloForMoneda } from './utils/formatters';
+import { initAnalytics, track } from './utils/analytics';
 
 // This is a dynamic import, so we need to declare the type for the module.
 // In a real project with a build system, you'd add this via `npm install --save-dev @types/xlsx`.
@@ -351,6 +352,8 @@ const DetailedResultsDashboard = ({ profitData, onInversionChange, investmentCur
 
 
 export default function App() {
+  React.useEffect(() => { initAnalytics(); }, []);
+
   const [activeTab, setActiveTab] = useState('calcular');
   const [paisSel, setPaisSel] = useState('colombia');
   const [showPaisMenu, setShowPaisMenu] = useState(false);
@@ -501,6 +504,7 @@ export default function App() {
         p.id === editId ? { ...p, ...form, ...metricas, pais: paisSel, incluirIva } : p
       ));
       setEditId(null);
+      track('producto_editado', { pais: paisSel, pvp: parseFloat(form.pvp), beneficioEspCOD: metricas.beneficioEspCOD });
     } else {
       setProductos([...productos, {
         id: Date.now(),
@@ -509,6 +513,7 @@ export default function App() {
         pais: paisSel,
         incluirIva
       }]);
+      track('producto_guardado', { pais: paisSel, pvp: parseFloat(form.pvp), beneficioEspCOD: metricas.beneficioEspCOD });
     }
     setForm({ nombre: '', pvp: '', coste: '', envio: '', cpaObj: '', costoDevolucion: '' });
   };
@@ -674,6 +679,14 @@ export default function App() {
         setHistorico(nuevosHistoricos);
         setImportacionActiva(nuevaImportacion.id);
         setFeedbackMsg({type: 'success', text: `¡Excel importado! ${totalPedidos} pedidos procesados.`});
+        track('excel_importado', {
+          pais: paisSel,
+          total_pedidos: totalPedidos,
+          entregados,
+          devoluciones: rehusadosTransito + rehusadosRecepcionados,
+          cancelados,
+          tasa_entrega: enviados > 0 ? Math.round((entregados / enviados) * 100) : 0,
+        });
         setActiveTab('resultados');
 
     } catch (error) {
@@ -830,7 +843,7 @@ export default function App() {
               {showPaisMenu && (
                 <div className="absolute top-full right-0 mt-2 bg-gray-800 border border-yellow-500/30 rounded-xl min-w-[200px] shadow-2xl z-10 overflow-hidden">
                   {Object.entries(PAISES).map(([key, p]) => (
-                    <button key={key} onClick={() => { setPaisSel(key); setShowPaisMenu(false); }} className={`w-full p-3 text-left ${paisSel === key ? 'bg-yellow-500/20' : 'hover:bg-gray-700'} transition-colors flex items-center gap-3 text-white text-sm`}>
+                    <button key={key} onClick={() => { setPaisSel(key); setShowPaisMenu(false); track('pais_seleccionado', { pais: key }); }} className={`w-full p-3 text-left ${paisSel === key ? 'bg-yellow-500/20' : 'hover:bg-gray-700'} transition-colors flex items-center gap-3 text-white text-sm`}>
                       <span className="text-2xl">{p.flag}</span>
                       <span className="font-bold">{p.nombre}</span>
                     </button>
