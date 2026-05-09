@@ -60,21 +60,29 @@ const SummaryDashboard: React.FC<SummaryDashboardProps> = ({ historico, inversio
   let totalCostosUSD = 0;
   let totalPedidos = 0;
   let totalEntregados = 0;
+  let totalEnviados = 0;
+  let totalDevoluciones = 0;
 
   historico.forEach(h => {
     const monedaPais = PAISES[h.pais]?.moneda;
     if (!monedaPais) return;
 
     const facturacion = h.datos.facturacion;
-    const costos = h.datos.costoProductos + h.datos.costoEnvioTotal + h.datos.costoDevolucionFleteTotal;
-    
+    const costos = h.datos.costoDevolucionFleteTotal;
+    const devoluciones = h.datos.rehusadosTransito + h.datos.rehusadosRecepcionados;
+
     totalFacturacionUSD += convertir(facturacion, monedaPais, 'USD');
     totalCostosUSD += convertir(costos, monedaPais, 'USD');
     totalPedidos += h.datos.total;
     totalEntregados += h.datos.entregados;
+    totalEnviados += h.datos.enviados;
+    totalDevoluciones += devoluciones;
   });
 
   const totalProfitOperativoUSD = totalFacturacionUSD - totalCostosUSD;
+  const totalTasaEntrega = totalEnviados > 0 ? (totalEntregados / totalEnviados) * 100 : 0;
+  const totalTasaDevolucion = totalEnviados > 0 ? (totalDevoluciones / totalEnviados) * 100 : 0;
+  const totalRatioEntregaPorDevolucion = totalDevoluciones > 0 ? totalEntregados / totalDevoluciones : 0;
 
   const inversionPublicidadTotal = parseFloat(inversionData.monto) || 0;
   const inversionPublicidadTotalUSD = convertir(inversionPublicidadTotal, inversionData.moneda, 'USD');
@@ -116,15 +124,15 @@ const SummaryDashboard: React.FC<SummaryDashboardProps> = ({ historico, inversio
         <div className="p-4 bg-gray-900/50 rounded-lg text-center mb-6">
             <p className="text-sm text-yellow-300/80">
                 <AlertCircle className="inline-block mr-2 -mt-1" size={16} />
-                <strong>Nota:</strong> El Profit, Inversión y ROI se calculan usando los valores de "Inversión Publicitaria" configurados actualmente en la pestaña <strong>Importar</strong>.
+                <strong>Nota:</strong> El P&L se basa en ingresos reales por entregas (GANANCIA) y costos reales solo por devoluciones (COSTO DEVOLUCION FLETE). Otros estados quedan pendientes de resolución.
             </p>
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard icon={DollarSign} label="Facturación Total" value={`$${fmtDec(totalFacturacionUSD)}`} color="green" />
-            <StatCard icon={TrendingDown} label="Costos Totales" value={`$${fmtDec(totalCostosUSD)}`} color="red" />
-            <StatCard icon={Package} label="Pedidos Totales" value={fmt(totalPedidos)} color="blue" />
-            <StatCard icon={Truck} label="Pedidos Entregados" value={fmt(totalEntregados)} color="yellow" />
+            <StatCard icon={DollarSign} label="Ingresos entregas" value={`$${fmtDec(totalFacturacionUSD)}`} color="green" />
+            <StatCard icon={TrendingDown} label="Costo devoluciones" value={`$${fmtDec(totalCostosUSD)}`} color="red" />
+            <StatCard icon={Package} label="Tasa entrega" value={`${fmtDec(totalTasaEntrega)}%`} color="blue" />
+            <StatCard icon={Truck} label="Tasa devolución" value={`${fmtDec(totalTasaDevolucion)}%`} color="yellow" />
         </div>
       </div>
     </div>
@@ -135,7 +143,7 @@ const DetailedResultsDashboard = ({ profitData, onInversionChange, investmentCur
     const pais = PAISES[profitData.pais];
     const simbolo = pais.simbolo;
 
-    const profitExcel = profitData.beneficioGastos - profitData.inversionPublicidadTotal;
+    const profitExcel = profitData.profitFinal;
 
     const StatBox: React.FC<{ label: string, value: number, total: number }> = ({ label, value, total }) => (
       <div className="bg-yellow-300 text-black p-2 rounded-lg shadow-md">
@@ -183,11 +191,11 @@ const DetailedResultsDashboard = ({ profitData, onInversionChange, investmentCur
     )`;
 
     const barChartData = [
-      { label: 'FACTURACIÓN', value: profitData.facturacion, color: 'from-green-400 to-green-600' },
-      { label: 'INVERSIÓN PUBLICITARIA', value: profitData.inversionPublicidadTotal, color: 'from-purple-400 to-purple-600' },
-      { label: 'COSTO PRODUCTOS', value: profitData.costoProductos, color: 'from-red-500 to-red-700' },
-      { label: 'COSTO ENVÍO (ENTREGADOS)', value: profitData.costoEnvioTotal, color: 'from-blue-400 to-blue-600' },
-      { label: 'COSTO DEVOLUCIÓN', value: profitData.costoDevolucionFleteTotal, color: 'from-rose-600 to-rose-800' },
+      { label: 'GANANCIA ENTREGAS', value: profitData.facturacion, color: 'from-green-400 to-green-600' },
+      { label: 'COSTO DEVOLUCIONES', value: profitData.costoDevolucionFleteTotal, color: 'from-rose-600 to-rose-800' },
+      { label: 'INV. PUBLICITARIA', value: profitData.inversionPublicidadTotal, color: 'from-purple-400 to-purple-600' },
+      { label: 'GASTOS OPERATIVOS', value: profitData.gastosOperativosTotal, color: 'from-orange-400 to-orange-600' },
+      { label: 'PROFIT FINAL', value: Math.max(profitData.profitFinal, 0), color: profitData.profitFinal >= 0 ? 'from-lime-400 to-lime-600' : 'from-red-500 to-red-700' },
     ];
     const maxBarValue = Math.max(...barChartData.map(d => d.value), 1);
 
@@ -243,20 +251,47 @@ const DetailedResultsDashboard = ({ profitData, onInversionChange, investmentCur
                         <BreakdownCard title="Entregados" color="lime" simbolo={simbolo} data={[
                             { label: 'Nº ENTREGADOS', value: fmt(profitData.entregados) },
                             { label: 'FACTURACIÓN', value: profitData.facturacion },
-                            { label: 'COSTO PRODUCTOS', value: profitData.costoProductos },
-                            { label: 'COSTO DEL ENVÍO (TOTAL)', value: profitData.costoEnvioTotal },
+                            { label: 'PRECIO PROVEEDOR (ref.)', value: profitData.costoProductos },
+                            { label: 'PRECIO FLETE (ref.)', value: profitData.costoEnvioTotal },
                         ]} />
                     </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="bg-rose-500 text-white p-2 rounded-lg text-center shadow-lg"><h5 className="text-xs font-bold">BENEFICIO - GASTOS</h5><p className="font-bold text-xl">{simbolo}{fmt(profitData.beneficioGastos)}</p></div>
-                        <div className="bg-rose-500 text-white p-2 rounded-lg text-center shadow-lg"><h5 className="text-xs font-bold">BENEFICIO - POSIBLE DEV</h5><p className="font-bold text-xl">{simbolo}{fmt(profitData.beneficioPosibleDev)}</p></div>
-                        <div className="bg-black text-lime-400 p-2 rounded-lg text-center shadow-lg border-2 border-lime-400"><h5 className="text-xs font-bold text-white">PROFIT</h5><p className="font-bold text-xl">{simbolo}{fmt(profitExcel)}</p></div>
+                        <div className="bg-green-700 text-white p-2 rounded-lg text-center shadow-lg"><h5 className="text-xs font-bold">GANANCIA ENTREGAS</h5><p className="font-bold text-xl">{simbolo}{fmt(profitData.beneficioGastos)}</p><p className="text-[10px] text-green-200 mt-1">Suma GANANCIA entregados</p></div>
+                        <div className="bg-rose-500 text-white p-2 rounded-lg text-center shadow-lg"><h5 className="text-xs font-bold">PROFIT OPERATIVO</h5><p className="font-bold text-xl">{simbolo}{fmt(profitData.beneficioPosibleDev)}</p><p className="text-[10px] text-rose-200 mt-1">– Costo devoluciones</p></div>
+                        <div className={`p-2 rounded-lg text-center shadow-lg border-2 ${profitExcel >= 0 ? 'bg-black border-lime-400 text-lime-400' : 'bg-black border-red-400 text-red-400'}`}><h5 className="text-xs font-bold text-white">PROFIT FINAL</h5><p className="font-bold text-xl">{simbolo}{fmt(profitExcel)}</p><p className="text-[10px] text-gray-400 mt-1">– Ads – Gastos Op.</p></div>
                         <div className="bg-purple-600 text-white p-2 rounded-lg text-center shadow-lg border-2 border-purple-400"><h5 className="text-xs font-bold">ROAS</h5><p className="font-bold text-xl">{profitData.roas ? fmtDec(profitData.roas) + 'x' : '—'}</p></div>
                     </div>
 
+                    {/* Métricas Dropi COD */}
+                    <div className="bg-gray-900/60 border border-yellow-500/20 rounded-lg p-3 mt-1">
+                        <h4 className="text-xs font-bold text-yellow-400 uppercase tracking-wider mb-3">Métricas Dropi COD</h4>
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                            <div className="bg-gray-800 p-2 rounded-lg text-center border border-gray-700">
+                                <p className="text-[10px] text-gray-400 font-bold uppercase leading-tight">Ganancia media<br/>por entrega</p>
+                                <p className="text-base font-bold text-green-400 mt-1">{simbolo}{fmt(profitData.gananciaMediaPorEntrega || 0)}</p>
+                            </div>
+                            <div className="bg-gray-800 p-2 rounded-lg text-center border border-gray-700">
+                                <p className="text-[10px] text-gray-400 font-bold uppercase leading-tight">Costo medio<br/>por devolución</p>
+                                <p className="text-base font-bold text-red-400 mt-1">{simbolo}{fmt(profitData.costoMedioPorDevolucion || 0)}</p>
+                            </div>
+                            <div className="bg-gray-800 p-2 rounded-lg text-center border border-gray-700">
+                                <p className="text-[10px] text-gray-400 font-bold uppercase leading-tight">Tasa<br/>entrega</p>
+                                <p className="text-base font-bold text-blue-400 mt-1">{fmtDec(profitData.tasaEntrega || 0)}%</p>
+                            </div>
+                            <div className="bg-gray-800 p-2 rounded-lg text-center border border-gray-700">
+                                <p className="text-[10px] text-gray-400 font-bold uppercase leading-tight">Tasa<br/>devolución</p>
+                                <p className="text-base font-bold text-yellow-400 mt-1">{fmtDec(profitData.tasaDevolucion || 0)}%</p>
+                            </div>
+                            <div className="bg-gray-800 p-2 rounded-lg text-center border border-gray-700">
+                                <p className="text-[10px] text-gray-400 font-bold uppercase leading-tight">Entregas para<br/>cubrir 1 dev.</p>
+                                <p className="text-base font-bold text-purple-400 mt-1">{fmtDec(profitData.ratioEntregaPorDevolucion || 0)}x</p>
+                            </div>
+                        </div>
+                    </div>
+
                     <div className="bg-gray-800 p-4 rounded-lg mt-4 border border-gray-700">
-                        <h3 className="font-bold text-center text-white mb-4">COSTO - BENEFICIO</h3>
+                        <h3 className="font-bold text-center text-white mb-4">P&L — WATERFALL</h3>
                         <div className="w-full h-64 flex justify-around items-end gap-2 text-white text-xs text-center">
                             {barChartData.map(bar => {
                                 const height = (bar.value / maxBarValue) * 90;
@@ -336,7 +371,7 @@ export default function App() {
     gastos: [], costeDevolucionUnitario: ''
   });
 
-  const [form, setForm] = useState<FormState>({ nombre: '', pvp: '', coste: '', envio: '', cpaObj: '' });
+  const [form, setForm] = useState<FormState>({ nombre: '', pvp: '', coste: '', envio: '', cpaObj: '', costoDevolucion: '' });
   const [editId, setEditId] = useState<number | null>(null);
   const [tasas, setTasas] = useState({ conf: 90, entr: 60 });
   const [cargando, setCargando] = useState(false);
@@ -412,6 +447,7 @@ export default function App() {
     const coste = parseFloat(form.coste) || 0;
     const envio = parseFloat(form.envio) || 0;
     const cpaObjInput = parseFloat(form.cpaObj) || 0;
+    const costoDevolucionUnit = parseFloat(form.costoDevolucion || '0') || 0;
 
     if (pvp === 0) return null;
 
@@ -430,14 +466,16 @@ export default function App() {
     const ingresoEsperado = pvp * tasaFinal;
     const costoProductoEsperado = costeConIva * tasaFinal;
     const costoEnvioEsperado = envio * tasaConf;
-    const beneficioEspCOD = ingresoEsperado - costoProductoEsperado - costoEnvioEsperado;
+    // Devoluciones: pedidos enviados que no se entregan pagan el flete de retorno
+    const costoDevolucionEsperado = costoDevolucionUnit * tasaConf * (1 - tasaEntr);
+    const beneficioEspCOD = ingresoEsperado - costoProductoEsperado - costoEnvioEsperado - costoDevolucionEsperado;
 
     const profitObjetivo = cpaObjInput > 0 ? beneficioEspCOD - cpaObj : null;
 
     return {
       coste, costeConIva, envio, beneficioBruto, margenBruto, cpaObj: cpaObjInput,
       tasaFinal, ingresoEsperado, costoProductoEsperado, costoEnvioEsperado,
-      beneficioEspCOD, profitObjetivo
+      costoDevolucionEsperado, beneficioEspCOD, profitObjetivo
     };
   }, [form, paisSel, incluirIva, tasas]);
   
@@ -465,12 +503,12 @@ export default function App() {
         incluirIva
       }]);
     }
-    setForm({ nombre: '', pvp: '', coste: '', envio: '', cpaObj: '' });
+    setForm({ nombre: '', pvp: '', coste: '', envio: '', cpaObj: '', costoDevolucion: '' });
   };
 
   const handleEdit = (p: Producto) => {
     setEditId(p.id);
-    setForm({ nombre: p.nombre, pvp: p.pvp, coste: String(p.coste), envio: String(p.envio), cpaObj: p.cpaObj ? String(p.cpaObj) : '' });
+    setForm({ nombre: p.nombre, pvp: p.pvp, coste: String(p.coste), envio: String(p.envio), cpaObj: p.cpaObj ? String(p.cpaObj) : '', costoDevolucion: (p as any).costoDevolucion || '' });
     setPaisSel(p.pais);
     setIncluirIva(p.incluirIva !== undefined ? p.incluirIva : true);
     setActiveTab('calcular');
@@ -503,79 +541,87 @@ export default function App() {
 
         const COLS = {
             STATUS: ['ESTATUS', 'K'],
-            VALOR_COMPRA: ['VALOR DE COMPRA EN PRODUCTOS', 'T'],
+            GANANCIA: ['GANANCIA', 'VALOR DE COMPRA EN PRODUCTOS', 'T'],
             FLETE: ['PRECIO FLETE', 'V'],
             COSTO_DEVOLUCION_FLETE: ['COSTO DEVOLUCION FLETE', 'W'],
             COSTO_PROVEEDOR: ['TOTAL EN PRECIOS DE PROVEEDOR', 'Y'],
         };
-        
-        const requiredHeaders = [
-            COLS.STATUS[0],
-            COLS.VALOR_COMPRA[0],
-            COLS.FLETE[0],
-            COLS.COSTO_PROVEEDOR[0],
-        ];
 
         const fileHeaders = Object.keys(jsonData[0] as object);
-        const missingHeaders = requiredHeaders.filter(header => !fileHeaders.includes(header));
+        const hasHeader = (keys: (string | number)[]) => keys.some(key => fileHeaders.includes(key));
+
+        const missingHeaders = [
+            { label: 'ESTATUS', keys: COLS.STATUS },
+            { label: 'GANANCIA', keys: COLS.GANANCIA },
+            { label: 'COSTO DEVOLUCION FLETE', keys: COLS.COSTO_DEVOLUCION_FLETE },
+        ].filter(col => !hasHeader(col.keys)).map(col => col.label);
 
         if (missingHeaders.length > 0) {
             throw new Error(`Cabeceras incorrectas. Faltan las columnas: ${missingHeaders.join(', ')}.`);
         }
 
         const getNum = (row: any, keys: (string | number)[]): number => {
-            for (const key of keys) { if (row[key] !== undefined) { const val = parseFloat(row[key]); return isNaN(val) ? 0 : val; } }
+            for (const key of keys) {
+                if (row[key] !== undefined) {
+                    const val = parseFloat(row[key]);
+                    return isNaN(val) ? 0 : val;
+                }
+            }
             return 0;
         };
 
         const getStr = (row: any, keys: (string | number)[]): string => {
-            for (const key of keys) { if (row[key] !== undefined) { return String(row[key]).toUpperCase().trim(); } }
+            for (const key of keys) {
+                if (row[key] !== undefined) {
+                    return String(row[key]).toUpperCase().trim();
+                }
+            }
             return '';
         };
-        
+
         let totalPedidos = jsonData.length;
         let rechazados = 0, cancelados = 0, enRuta = 0, novedades = 0;
         let entregados = 0, rehusadosTransito = 0, rehusadosRecepcionados = 0;
         let reclameOficina = 0, noConfirmables = 0;
-        
+
         let facturacionEntregados = 0, facturacionIncidencia = 0;
         let costoProductosEntregados = 0, costoEnvioTotal = 0, costoDevolucionFleteTotal = 0;
 
         jsonData.forEach((row: any) => {
             const status = getStr(row, COLS.STATUS);
-            const valorCompra = getNum(row, COLS.VALOR_COMPRA);
+            const ganancia = getNum(row, COLS.GANANCIA);
             const costoProveedor = getNum(row, COLS.COSTO_PROVEEDOR);
             const flete = getNum(row, COLS.FLETE);
             const devolucionFlete = getNum(row, COLS.COSTO_DEVOLUCION_FLETE);
 
-            costoEnvioTotal += flete;
-            costoDevolucionFleteTotal += devolucionFlete;
-
             switch (status) {
                 case 'ENTREGADO':
                     entregados++;
-                    facturacionEntregados += valorCompra;
+                    facturacionEntregados += ganancia;
                     costoProductosEntregados += costoProveedor;
+                    costoEnvioTotal += flete;
                     break;
                 case 'RECHAZADO':
                     rechazados++;
                     break;
                 case 'CANCELADO':
-                    noConfirmables++; // Assuming "NO CONFIRMABLES" in excel is "CANCELADO"
+                    cancelados++;
                     break;
                 case 'RECLAME EN OFICINA':
                     reclameOficina++;
                     break;
                 case 'NOVEDAD':
                     novedades++;
-                    facturacionIncidencia += valorCompra;
+                    facturacionIncidencia += ganancia;
                     break;
                 case 'DEVOLUCION':
                 case 'EN PROCESO DE DEVOLUCION':
                     rehusadosTransito++;
+                    costoDevolucionFleteTotal += devolucionFlete;
                     break;
                 case 'REHUSADO - RECEPCIONADO EN ALMACÉN':
                     rehusadosRecepcionados++;
+                    costoDevolucionFleteTotal += devolucionFlete;
                     break;
                 case 'EN BODEGA TRANSPORTADORA':
                 case 'EN REPARTO':
@@ -586,8 +632,8 @@ export default function App() {
                     break;
             }
         });
-        
-        const enviados = totalPedidos - rechazados - noConfirmables - reclameOficina;
+
+        const enviados = totalPedidos - rechazados - cancelados - reclameOficina;
 
         const nuevaImportacion: HistoricoItem = {
             id: Date.now(),
@@ -606,7 +652,7 @@ export default function App() {
                 facturacionIncidencia,
                 rehusadosTransito, 
                 rehusadosRecepcionados, 
-                cancelados: 0, 
+                cancelados,
                 rechazados, 
                 reclameOficina, 
                 noConfirmables,
@@ -663,17 +709,18 @@ export default function App() {
     const costoProductos = datos.costoProductos || 0;
     const costoEnvioTotal = datos.costoEnvioTotal || 0;
     
-    let costoDevolucionFleteTotal = datos.costoDevolucionFleteTotal;
+    let costoDevolucionFleteTotal = datos.costoDevolucionFleteTotal || 0;
+    const devoluciones = datos.rehusadosTransito + datos.rehusadosRecepcionados;
     const devolucionUnitaria = parseFloat(historicGastos.costeDevolucionUnitario || '0');
-    if (importacion.pais === 'espana' && devolucionUnitaria > 0) {
-      costoDevolucionFleteTotal = datos.rehusadosRecepcionados * devolucionUnitaria;
+    if (importacion.pais === 'espana' && costoDevolucionFleteTotal === 0 && devolucionUnitaria > 0) {
+      costoDevolucionFleteTotal = devoluciones * devolucionUnitaria;
     }
 
-    const costos = costoProductos + costoEnvioTotal + costoDevolucionFleteTotal;
+    const costos = costoDevolucionFleteTotal;
     const profitOperativo = facturacion - costos;
 
-    const beneficioGastos = facturacion - costoProductos - costoEnvioTotal;
-    const beneficioPosibleDev = beneficioGastos - costoDevolucionFleteTotal;
+    const beneficioGastos = facturacion;
+    const beneficioPosibleDev = profitOperativo;
 
     const profitFinal = profitOperativo - inversionPublicidadTotalEnMonedaLocal - gastosOperativosTotal;
     
@@ -681,18 +728,34 @@ export default function App() {
     const roi = gastosAdsOperativos > 0 ? (profitFinal / gastosAdsOperativos) * 100 : 0;
     const roas = inversionPublicidadTotalEnMonedaLocal > 0 ? facturacion / inversionPublicidadTotalEnMonedaLocal : 0;
     const cpaReal = datos.entregados > 0 ? inversionPublicidadTotalEnMonedaLocal / datos.entregados : 0;
+    const tasaEntrega = datos.enviados > 0 ? (datos.entregados / datos.enviados) * 100 : 0;
+    const tasaDevolucion = datos.enviados > 0 ? (devoluciones / datos.enviados) * 100 : 0;
+    const ratioEntregaPorDevolucion = devoluciones > 0 ? datos.entregados / devoluciones : 0;
+    const gananciaMediaPorEntrega = datos.entregados > 0 ? facturacion / datos.entregados : 0;
+    const costoMedioPorDevolucion = devoluciones > 0 ? costoDevolucionFleteTotal / devoluciones : 0;
 
     return {
-      ...datos, facturacion, costos, profitOperativo,
+      ...datos,
+      facturacion,
+      costos,
+      profitOperativo,
       profitFinal,
       inversionPublicidadTotal: inversionPublicidadTotalEnMonedaLocal,
       gastosOperativosTotal,
       pais: importacion.pais,
-      cpaReal, roi, roas,
+      cpaReal,
+      roi,
+      roas,
       inversionMoneda: monedaInversion,
       inversionEnCampana: inversionPublicidadTotal,
       beneficioGastos,
       beneficioPosibleDev,
+      devoluciones,
+      tasaEntrega,
+      tasaDevolucion,
+      ratioEntregaPorDevolucion,
+      gananciaMediaPorEntrega,
+      costoMedioPorDevolucion,
       costoDevolucionFleteTotal,
       inversionData: historicInversion,
     };
@@ -820,6 +883,10 @@ export default function App() {
                                 <input type="number" value={form.envio} onChange={(e) => setForm({ ...form, envio: e.target.value })} placeholder="4680" className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 outline-none transition" />
                             </div>
                         </div>
+                        <div>
+                            <label className="block text-sm font-bold mb-2 text-gray-300">↩️ Costo Devolución <span className="text-gray-500 font-normal">(flete retorno por orden devuelta)</span></label>
+                            <input type="number" value={form.costoDevolucion || ''} onChange={(e) => setForm({ ...form, costoDevolucion: e.target.value })} placeholder={form.envio ? String(Math.round(parseFloat(form.envio) * 0.8)) : '≈ 80% del envío'} className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none transition" />
+                        </div>
                         {pais.iva > 0 && (
                           <div className="p-4 bg-purple-500/10 border border-purple-500/30 rounded-lg flex justify-between items-center">
                               <div>
@@ -878,8 +945,28 @@ export default function App() {
                    <div className="bg-gray-800 p-6 rounded-2xl border border-yellow-500/30">
                      <h3 className="text-lg font-bold mb-4 text-yellow-400">💰 PROFIT POR PEDIDO</h3>
                       <div className="space-y-4">
+                            <div className="space-y-1">
+                              <div className="p-2 bg-gray-700/50 rounded flex justify-between items-center text-xs">
+                                <span className="text-gray-400">Ingreso esperado (PVP × tasa entrega):</span>
+                                <span className="text-green-300 font-bold">+{pais.simbolo}{fmt(metricas.ingresoEsperado)}</span>
+                              </div>
+                              <div className="p-2 bg-gray-700/50 rounded flex justify-between items-center text-xs">
+                                <span className="text-gray-400">Costo producto esperado:</span>
+                                <span className="text-red-300 font-bold">−{pais.simbolo}{fmt(metricas.costoProductoEsperado)}</span>
+                              </div>
+                              <div className="p-2 bg-gray-700/50 rounded flex justify-between items-center text-xs">
+                                <span className="text-gray-400">Costo envío esperado (enviados):</span>
+                                <span className="text-red-300 font-bold">−{pais.simbolo}{fmt(metricas.costoEnvioEsperado)}</span>
+                              </div>
+                              {metricas.costoDevolucionEsperado > 0 && (
+                                <div className="p-2 bg-rose-500/10 rounded flex justify-between items-center text-xs border border-rose-500/30">
+                                  <span className="text-rose-300">Costo devolución esperado ({fmtDec((tasas.conf / 100) * (1 - tasas.entr / 100) * 100)}% pedidos):</span>
+                                  <span className="text-rose-300 font-bold">−{pais.simbolo}{fmt(metricas.costoDevolucionEsperado)}</span>
+                                </div>
+                              )}
+                            </div>
                             <div className="p-3 bg-blue-500/10 rounded-lg border-2 border-blue-500/40 flex justify-between items-center">
-                              <span className="text-xs font-bold text-blue-200">Beneficio bruto esperado:</span>
+                              <span className="text-xs font-bold text-blue-200">Beneficio bruto esperado (COD):</span>
                               <span className="text-lg font-bold text-blue-300">{pais.simbolo}{fmt(metricas.beneficioEspCOD)}</span>
                             </div>
 

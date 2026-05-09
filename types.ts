@@ -18,6 +18,7 @@ export interface ProductoCalculado {
   costoProductoEsperado: number;
   costoEnvioEsperado: number;
   beneficioEspCOD: number;
+  costoDevolucionEsperado: number;
   profitObjetivo: number | null;
 }
 
@@ -35,6 +36,7 @@ export interface FormState {
   coste: string;
   envio: string;
   cpaObj: string;
+  costoDevolucion?: string;
 }
 
 export interface InversionData {
@@ -111,5 +113,11 @@ export interface ProfitData extends ImportacionDatos {
     roas?: number;
     beneficioGastos: number;
     beneficioPosibleDev: number;
+    devoluciones?: number;
+    tasaEntrega?: number;
+    tasaDevolucion?: number;
+    ratioEntregaPorDevolucion?: number;
+    gananciaMediaPorEntrega?: number;
+    costoMedioPorDevolucion?: number;
     inversionData: InversionData;
 }
