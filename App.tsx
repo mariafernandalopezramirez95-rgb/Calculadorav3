@@ -952,12 +952,12 @@ export default function App() {
                                 <span className="text-red-300 font-bold">−{pais.simbolo}{fmt(metricas.costoProductoEsperado)}</span>
                               </div>
                               <div className="p-2 bg-gray-700/50 rounded flex justify-between items-center text-xs">
-                                <span className="text-gray-400">Costo envío esperado (enviados):</span>
+                                <span className="text-gray-400">Costo envío (entregados):</span>
                                 <span className="text-red-300 font-bold">−{pais.simbolo}{fmt(metricas.costoEnvioEsperado)}</span>
                               </div>
                               {metricas.costoDevolucionEsperado > 0 && (
                                 <div className="p-2 bg-rose-500/10 rounded flex justify-between items-center text-xs border border-rose-500/30">
-                                  <span className="text-rose-300">Costo devolución esperado ({fmtDec((tasas.conf / 100) * (1 - tasas.entr / 100) * 100)}% pedidos):</span>
+                                  <span className="text-rose-300">Flete retorno ({fmtDec((tasas.conf / 100) * (1 - tasas.entr / 100) * 100)}% pedidos devueltos):</span>
                                   <span className="text-rose-300 font-bold">−{pais.simbolo}{fmt(metricas.costoDevolucionEsperado)}</span>
                                 </div>
                               )}
