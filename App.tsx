@@ -890,7 +890,7 @@ export default function App() {
                                 const profitConCPA = metricas.beneficioEspCOD - cpaEnMonedaLocal;
                                 const profitPercentage = pvp > 0 ? (profitConCPA / pvp) * 100 : 0;
                                 
-                                const roasProducto = cpaEnMonedaLocal > 0 ? metricas.ingresoEsperado / cpaEnMonedaLocal : 0;
+                                const roasProducto = cpaEnMonedaLocal > 0 ? pvp / cpaEnMonedaLocal : 0;
                                 return (
                                   <div className="space-y-4">
                                     <div className={`p-4 rounded-xl text-center border-2 ${profitConCPA >= 0 ? 'bg-green-500/20 border-green-500/60' : 'bg-red-500/20 border-red-500/60'}`}>
