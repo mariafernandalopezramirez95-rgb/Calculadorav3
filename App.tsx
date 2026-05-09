@@ -376,8 +376,14 @@ export default function App() {
   const [cargando, setCargando] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<{type: 'success' | 'error', text: string} | null>(null);
   const [tasaARS, setTasaARS] = useState(1200);
+  const [tasaCOP, setTasaCOP] = useState(4000);
+  const [tasaGTQ, setTasaGTQ] = useState(7.8);
+  const [tasaEUR, setTasaEUR] = useState(0.92);
 
   useEffect(() => { TASAS_USD.ARS = tasaARS; }, [tasaARS]);
+  useEffect(() => { TASAS_USD.COP = tasaCOP; }, [tasaCOP]);
+  useEffect(() => { TASAS_USD.GTQ = tasaGTQ; }, [tasaGTQ]);
+  useEffect(() => { TASAS_USD.EUR = tasaEUR; }, [tasaEUR]);
 
   useEffect(() => {
     try {
@@ -793,13 +799,25 @@ export default function App() {
             {paisSel === 'argentina' && (
               <div className="flex items-center gap-2 px-3 py-2 bg-blue-500/10 border border-blue-500/30 rounded-lg">
                 <span className="text-xs text-blue-300 font-bold whitespace-nowrap">💱 ARS/USD</span>
-                <input
-                  type="number"
-                  value={tasaARS}
-                  onChange={(e) => setTasaARS(parseFloat(e.target.value) || 1)}
-                  className="w-20 bg-transparent text-white text-sm font-bold text-center outline-none border-b border-blue-400/50"
-                  min="1"
-                />
+                <input type="number" value={tasaARS} onChange={(e) => setTasaARS(parseFloat(e.target.value) || 1)} className="w-24 bg-transparent text-white text-sm font-bold text-center outline-none border-b border-blue-400/50" min="1" />
+              </div>
+            )}
+            {paisSel === 'colombia' && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                <span className="text-xs text-yellow-300 font-bold whitespace-nowrap">💱 COP/USD</span>
+                <input type="number" value={tasaCOP} onChange={(e) => setTasaCOP(parseFloat(e.target.value) || 1)} className="w-24 bg-transparent text-white text-sm font-bold text-center outline-none border-b border-yellow-400/50" min="1" />
+              </div>
+            )}
+            {paisSel === 'guatemala' && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-green-500/10 border border-green-500/30 rounded-lg">
+                <span className="text-xs text-green-300 font-bold whitespace-nowrap">💱 GTQ/USD</span>
+                <input type="number" value={tasaGTQ} onChange={(e) => setTasaGTQ(parseFloat(e.target.value) || 1)} className="w-20 bg-transparent text-white text-sm font-bold text-center outline-none border-b border-green-400/50" step="0.1" min="0.1" />
+              </div>
+            )}
+            {paisSel === 'espana' && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-purple-500/10 border border-purple-500/30 rounded-lg">
+                <span className="text-xs text-purple-300 font-bold whitespace-nowrap">💱 EUR/USD</span>
+                <input type="number" value={tasaEUR} onChange={(e) => setTasaEUR(parseFloat(e.target.value) || 0.01)} className="w-20 bg-transparent text-white text-sm font-bold text-center outline-none border-b border-purple-400/50" step="0.01" min="0.01" />
               </div>
             )}
             <div className="relative">
