@@ -466,7 +466,7 @@ export default function App() {
 
     const ingresoEsperado = pvp * tasaFinal;
     const costoProductoEsperado = costeConIva * tasaFinal;
-    const costoEnvioEsperado = envio * tasaConf;
+    const costoEnvioEsperado = envio * tasaFinal;
     // Devoluciones: pedidos enviados que no se entregan pagan el flete de retorno
     const costoDevolucionEsperado = costoDevolucionUnit * tasaConf * (1 - tasaEntr);
     const beneficioEspCOD = ingresoEsperado - costoProductoEsperado - costoEnvioEsperado - costoDevolucionEsperado;
