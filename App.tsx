@@ -256,11 +256,10 @@ const DetailedResultsDashboard = ({ profitData, onInversionChange, investmentCur
                         ]} />
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="bg-green-700 text-white p-2 rounded-lg text-center shadow-lg"><h5 className="text-xs font-bold">GANANCIA ENTREGAS</h5><p className="font-bold text-xl">{simbolo}{fmt(profitData.beneficioGastos)}</p><p className="text-[10px] text-green-200 mt-1">Suma GANANCIA entregados</p></div>
                         <div className="bg-rose-500 text-white p-2 rounded-lg text-center shadow-lg"><h5 className="text-xs font-bold">PROFIT OPERATIVO</h5><p className="font-bold text-xl">{simbolo}{fmt(profitData.beneficioPosibleDev)}</p><p className="text-[10px] text-rose-200 mt-1">– Costo devoluciones</p></div>
                         <div className={`p-2 rounded-lg text-center shadow-lg border-2 ${profitExcel >= 0 ? 'bg-black border-lime-400 text-lime-400' : 'bg-black border-red-400 text-red-400'}`}><h5 className="text-xs font-bold text-white">PROFIT FINAL</h5><p className="font-bold text-xl">{simbolo}{fmt(profitExcel)}</p><p className="text-[10px] text-gray-400 mt-1">– Ads – Gastos Op.</p></div>
-                        <div className="bg-purple-600 text-white p-2 rounded-lg text-center shadow-lg border-2 border-purple-400"><h5 className="text-xs font-bold">ROAS</h5><p className="font-bold text-xl">{profitData.roas ? fmtDec(profitData.roas) + 'x' : '—'}</p></div>
                     </div>
 
                     {/* Métricas Dropi COD */}
@@ -883,10 +882,6 @@ export default function App() {
                                 <input type="number" value={form.envio} onChange={(e) => setForm({ ...form, envio: e.target.value })} placeholder="4680" className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 outline-none transition" />
                             </div>
                         </div>
-                        <div>
-                            <label className="block text-sm font-bold mb-2 text-gray-300">↩️ Costo Devolución <span className="text-gray-500 font-normal">(flete retorno por orden devuelta)</span></label>
-                            <input type="number" value={form.costoDevolucion || ''} onChange={(e) => setForm({ ...form, costoDevolucion: e.target.value })} placeholder={form.envio ? String(Math.round(parseFloat(form.envio) * 0.8)) : '≈ 80% del envío'} className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none transition" />
-                        </div>
                         {pais.iva > 0 && (
                           <div className="p-4 bg-purple-500/10 border border-purple-500/30 rounded-lg flex justify-between items-center">
                               <div>
@@ -977,28 +972,21 @@ export default function App() {
                                 const profitConCPA = metricas.beneficioEspCOD - cpaEnMonedaLocal;
                                 const profitPercentage = pvp > 0 ? (profitConCPA / pvp) * 100 : 0;
                                 
-                                const roasProducto = cpaEnMonedaLocal > 0 ? metricas.beneficioEspCOD / cpaEnMonedaLocal : 0;
                                 return (
-                                  <div className="space-y-4">
-                                    <div className={`p-4 rounded-xl text-center border-2 ${profitConCPA >= 0 ? 'bg-green-500/20 border-green-500/60' : 'bg-red-500/20 border-red-500/60'}`}>
-                                      <p className="text-xs font-bold text-gray-400 uppercase">🎯 PROFIT FINAL POR PEDIDO</p>
-                                      <p className={`my-1 text-5xl font-bold ${profitConCPA >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                        {fmtDec(profitPercentage)}%
-                                      </p>
-                                      <div className="flex justify-center gap-4 mt-2">
-                                          <p className={`text-lg font-bold ${profitConCPA >= 0 ? 'text-green-300' : 'text-red-300'}`}>
-                                            {pais.simbolo}{fmt(profitConCPA)}
-                                          </p>
-                                          <p className="text-lg text-gray-400">
-                                            (${fmtDec(convertir(profitConCPA, pais.moneda, 'USD'))} USD)
-                                          </p>
-                                      </div>
-                                      {profitConCPA < 0 && <div className="mt-3 p-2 bg-red-500/20 rounded-md text-center text-xs text-red-300 font-bold">⚠️ PRODUCTO NO RENTABLE</div>}
+                                  <div className={`p-4 rounded-xl text-center border-2 ${profitConCPA >= 0 ? 'bg-green-500/20 border-green-500/60' : 'bg-red-500/20 border-red-500/60'}`}>
+                                    <p className="text-xs font-bold text-gray-400 uppercase">🎯 PROFIT FINAL POR PEDIDO</p>
+                                    <p className={`my-1 text-5xl font-bold ${profitConCPA >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                      {fmtDec(profitPercentage)}%
+                                    </p>
+                                    <div className="flex justify-center gap-4 mt-2">
+                                        <p className={`text-lg font-bold ${profitConCPA >= 0 ? 'text-green-300' : 'text-red-300'}`}>
+                                          {pais.simbolo}{fmt(profitConCPA)}
+                                        </p>
+                                        <p className="text-lg text-gray-400">
+                                          (${fmtDec(convertir(profitConCPA, pais.moneda, 'USD'))} USD)
+                                        </p>
                                     </div>
-                                    <div className="p-3 bg-purple-500/10 rounded-xl border-2 border-purple-500/40 flex justify-between items-center">
-                                      <span className="text-xs font-bold text-purple-200">📊 ROAS:</span>
-                                      <span className="text-2xl font-bold text-purple-300">{fmtDec(roasProducto)}x</span>
-                                    </div>
+                                    {profitConCPA < 0 && <div className="mt-3 p-2 bg-red-500/20 rounded-md text-center text-xs text-red-300 font-bold">⚠️ PRODUCTO NO RENTABLE</div>}
                                   </div>
                                 );
                               })()
