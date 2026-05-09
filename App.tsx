@@ -446,7 +446,9 @@ export default function App() {
     const coste = parseFloat(form.coste) || 0;
     const envio = parseFloat(form.envio) || 0;
     const cpaObjInput = parseFloat(form.cpaObj) || 0;
-    const costoDevolucionUnit = paisSel === 'argentina' ? (parseFloat(form.envio) || 0) * 0.8 : 0;
+    const costoDevolucionUnit = paisSel === 'argentina' ? (parseFloat(form.envio) || 0) * 0.8
+      : paisSel === 'guatemala' ? (parseFloat(form.envio) || 0) * 0.5
+      : parseFloat(form.envio) || 0;
 
     if (pvp === 0) return null;
 
